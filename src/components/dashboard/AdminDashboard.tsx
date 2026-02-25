@@ -47,7 +47,7 @@ export async function getUsersCount(isVerified?: boolean) {
   return getUsers({ count: true, isVerified });
 }
 export function RequestCountCard() {
-  const { data, error, isFetching } = useQuery({
+  const { data, error, isLoading } = useQuery({
     queryKey: ["getPendingRequestsCount", PaymentStatus.pending],
     queryFn: () => getRequestsCount(PaymentStatus.pending),
     refetchOnWindowFocus: false,
@@ -62,7 +62,7 @@ export function RequestCountCard() {
       </CardHeader>
 
       <CardContent className="flex items-center justify-center py-6">
-        {isFetching ? (
+        {isLoading ? (
           <Loader />
         ) : error instanceof Error ? (
           <p className="text-sm text-red-500">{error.message}</p>
@@ -80,7 +80,7 @@ export function RequestCountCard() {
 }
 
 export function UsersCountCard() {
-  const { data, error, isFetching } = useQuery({
+  const { data, error, isLoading } = useQuery({
     queryKey: ["getUnVerifiedUsers", false],
     queryFn: () => getUsersCount(false),
     refetchOnWindowFocus: false,
@@ -95,7 +95,7 @@ export function UsersCountCard() {
       </CardHeader>
 
       <CardContent className="flex items-center justify-center py-6">
-        {isFetching ? (
+        {isLoading ? (
           <Loader />
         ) : error instanceof Error ? (
           <p className="text-sm text-red-500">{error.message}</p>
@@ -128,13 +128,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 export function TotalMoneyLast() {
-  const { data, error, isFetching } = useQuery({
+  const { data, error, isLoading } = useQuery({
     queryKey: ["getTotalSales"],
     queryFn: () => axios.get("api/admin/dashboard").then((res) => res.data),
     refetchOnWindowFocus: false,
   });
 
-  if (isFetching)
+  if (isLoading)
     return (
       <Card className="w-full max-w-sm rounded-2xl shadow-md">
         <CardContent>

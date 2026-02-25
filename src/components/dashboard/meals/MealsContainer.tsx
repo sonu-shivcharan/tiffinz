@@ -17,7 +17,7 @@ function MealsContainer() {
   const options = {
     ...(!isAdmin && { isActive: true }),
   };
-  const { data, error, isFetching } = useQuery({
+  const { data, error, isLoading } = useQuery({
     queryKey: ["getAllMeals", options],
     queryFn: () => getAllMeals(options),
     refetchOnWindowFocus: false,
@@ -27,7 +27,7 @@ function MealsContainer() {
     toast.error(error.message);
     return <div>{error.message}</div>;
   }
-  if (isFetching) {
+  if (isLoading) {
     return <Loader />;
   }
   const meals = data?.meals;
@@ -56,14 +56,13 @@ function MealsContainer() {
         <h1 className="font-bold py-2">Meals </h1>
         <div className=" w-full grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6 justify-center md:px-4 ">
           <div className="text-center">No meals found</div>
-        {isAdmin && (
-          <div className="fixed right-4 bottom-24 md:bottom-10">
-          <AddNewMealButton />
-          </div>
+          {isAdmin && (
+            <div className="fixed right-4 bottom-24 md:bottom-10">
+              <AddNewMealButton />
+            </div>
           )}
         </div>
       </div>
-      
     </div>
   );
 }

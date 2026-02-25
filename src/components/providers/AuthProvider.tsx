@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import Loader from "../ui/Loader";
 import { useEffect } from "react";
 import { setUser } from "@/store/authSlice";
-import { usePathname, useRouter } from "next/navigation";
+import { notFound, usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const publicRoutes = [
@@ -74,7 +74,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       !isLoggedIn
     ) {
       const safeRedirect = validProtectedRoutes.find((value) =>
-        value.startsWith(pathname)
+        value.startsWith(pathname),
       )
         ? pathname
         : "/dashboard";
@@ -92,7 +92,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   if (!isPublicRoute && !isValidRoute) {
-    return <p>404 | Page not found</p>;
+    return notFound();
   }
 
   if (isLoading && !currentUser) {
