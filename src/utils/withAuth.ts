@@ -40,7 +40,10 @@ export function withAuth<T = Record<string, never>>(
         throw new ApiError("Invalid userId", 401);
       }
 
-      const cachedUser = await redis.get<IUser>(`user:${userId}`);
+      const cachedUser = await redis
+        .get<IUser>(`user:${userId}`)
+        .catch(() => null);
+
       let user;
 
       if (!cachedUser) {
