@@ -1,6 +1,7 @@
 import { DailyMealFor, MealStatus, UserRole } from "@/constants/enum";
 import MealLog from "@/models/mealLogs.model";
 import { ApiResponse } from "@/utils/ApiResponse";
+import connectDB from "@/utils/dbConnect";
 import { withAuth } from "@/utils/withAuth";
 
 const getOrders = withAuth(
@@ -30,7 +31,7 @@ const getOrders = withAuth(
       );
     }
     console.log("options", options);
-
+    await connectDB();
     const meals = await MealLog.aggregatePaginate([
       {
         $match: {

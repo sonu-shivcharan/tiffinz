@@ -1,6 +1,7 @@
 import { PaymentStatus, UserRole } from "@/constants/enum";
 import AddBalanceRequest from "@/models/addBalanceRequest.model";
 import { ApiResponse } from "@/utils/ApiResponse";
+import connectDB from "@/utils/dbConnect";
 import { withAuth } from "@/utils/withAuth";
 
 type FilterType = {
@@ -16,12 +17,13 @@ export const GET = withAuth(
     if (status && Object.values(PaymentStatus).includes(status)) {
       filter.status = status;
     }
+    await connectDB();
     if (countOnly) {
       const count = await AddBalanceRequest.countDocuments(filter);
       return ApiResponse.success(
         "Count fetched successfully",
         { count, status },
-        200
+        200,
       );
     }
     const requests = await AddBalanceRequest.find(filter).populate({
@@ -34,10 +36,10 @@ export const GET = withAuth(
     return ApiResponse.success(
       "Fetched requests successfully",
       { requests },
-      200
+      200,
     );
   },
   {
     requiredRole: UserRole.admin,
-  }
+  },
 );
