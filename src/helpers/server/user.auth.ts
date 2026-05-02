@@ -200,7 +200,7 @@ async function refreshUserSession() {
     throw new ApiError("Session expired, login again", 400);
   }
   const userId = payload?._id as string;
-  console.log("userId", userId);
+
   if (!userId) {
     console.error("userId not found in the payload");
     throw new ApiError("Session expired");
