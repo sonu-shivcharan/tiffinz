@@ -42,10 +42,10 @@ export function withAuth<T = Record<string, never>>(
 
       const cachedUser = await redis.get<IUser>(`user:${userId}`);
       let user;
+      await connectDB();
 
       if (!cachedUser) {
         console.log("cache miss");
-        await connectDB();
         user = await User.findById<IUser>(userId).select("-password").lean();
         await redis.set(`user:${userId}`, user, {
           ex: 60 * 15,
