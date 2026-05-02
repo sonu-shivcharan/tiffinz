@@ -19,6 +19,7 @@ const getOrders = withAuth(
     if (options.mealFor !== "" && !(options.mealFor in DailyMealFor)) {
       return ApiResponse.error("Invalid mealFor", 400);
     }
+    await connectDB();
     if (options.count) {
       const count = await MealLog.countDocuments({
         status: options.status.toUpperCase(),
@@ -31,7 +32,7 @@ const getOrders = withAuth(
       );
     }
     console.log("options", options);
-    await connectDB();
+
     const meals = await MealLog.aggregatePaginate([
       {
         $match: {
