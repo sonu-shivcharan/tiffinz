@@ -25,7 +25,7 @@ import {
 } from "../ui/chart";
 
 import axios from "axios";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import { CreditCard, Users, Utensils, IndianRupee } from "lucide-react";
 
 function AdminDashboard({ user }: { user: IUser }) {
@@ -277,7 +277,7 @@ export function TotalMoneyLast({
     "Dec",
   ];
   console.log("data", data);
-  let monthWiseSales = data.data?.totalMoneyRecievedMonthly as Sales[];
+  const monthWiseSales = data.data?.totalMoneyRecievedMonthly as Sales[];
   if (monthWiseSales.length === 0) {
     return (
       <Card className="w-full rounded-2xl shadow-md">
@@ -289,24 +289,7 @@ export function TotalMoneyLast({
       </Card>
     );
   }
-  if (monthWiseSales.length < 6) {
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
-    const existingMonths = monthWiseSales.map((item) => item.month);
-    for (let i = 0; i < 6; i++) {
-      const month = currentMonth - i;
-      const year = month <= 0 ? currentYear - 1 : currentYear;
-      const adjustedMonth = month <= 0 ? month + 12 : month;
-      if (!existingMonths.includes(adjustedMonth)) {
-        monthWiseSales.push({
-          month: adjustedMonth,
-          year,
-          totalAmount: i * 4494,
-        });
-      }
-    }
-    monthWiseSales = monthWiseSales.reverse();
-  }
+
   const sales = monthWiseSales.map((item) => ({
     ...item,
     monthLabel: MONTHS[item.month],
@@ -330,7 +313,7 @@ export function TotalMoneyLast({
         className="px-4 max-h-54 h-full  max-w-4xlx w-full mx-auto"
         config={chartConfig}
       >
-        <AreaChart
+        <BarChart
           accessibilityLayer
           data={sales}
           margin={{ left: 10, right: 10 }}
@@ -346,14 +329,14 @@ export function TotalMoneyLast({
 
           <ChartTooltip cursor={true} content={<ChartTooltipContent />} />
 
-          <Area
+          <Bar
             dataKey="totalAmount"
             type="natural"
             fill="var(--color-month)"
             fillOpacity={0.2}
             stroke="var(--color-month)"
           />
-        </AreaChart>
+        </BarChart>
       </ChartContainer>
 
       <CardFooter className="flex flex-col justify-end">
