@@ -5,10 +5,12 @@ import { verifyJWT } from "./verifyJWT";
 import { ApiError } from "./apiError";
 import User, { IUser } from "@/models/user.model";
 import connectDB from "./dbConnect";
+import { redis } from "./redis";
+import { isValidObjectId } from "mongoose";
 
 type withAuthOptions = {
   requiredRole?: UserRole;
-};// Define the RouteContext type to match Next.js expectations
+}; // Define the RouteContext type to match Next.js expectations
 type RouteContext<T = Record<string, never>> = {
   params: Promise<T>;
 };
@@ -18,9 +20,9 @@ export function withAuth<T = Record<string, never>>(
   callback: (
     req: NextRequest,
     context: RouteContext<T>,
-    user?: IUser
+    user?: IUser,
   ) => Promise<Response>,
-  options?: withAuthOptions
+  options?: withAuthOptions,
 ) {
   return async function (req: NextRequest, context: RouteContext<T>) {
     try {
@@ -34,8 +36,25 @@ export function withAuth<T = Record<string, never>>(
         throw error || new ApiError("Invalid token", 401);
       }
       const userId = payload?._id;
-      await connectDB();
-      const user = await User.findById(userId).select("-password");
+      if (!isValidObjectId(userId)) {
+        throw new ApiError("Invalid userId", 401);
+      }
+
+      const cachedUser = await redis.get<IUser>(`user:${userId}`);
+      let user;
+
+      if (!cachedUser) {
+        console.log("cache miss");
+        await connectDB();
+        user = await User.findById<IUser>(userId).select("-password").lean();
+        await redis.set(`user:${userId}`, user, {
+          ex: 60 * 15,
+        });
+      } else {
+        user = cachedUser;
+        console.log("cache hit");
+      }
+
       if (!user) {
         throw new ApiError("User not found", 404);
       }
@@ -47,7 +66,7 @@ export function withAuth<T = Record<string, never>>(
         throw new ApiError("Access denied", 403);
       }
 
-      return await callback(req, context, user);
+      return await callback(req, context, user as IUser);
     } catch (error) {
       return handleError(error);
     }
