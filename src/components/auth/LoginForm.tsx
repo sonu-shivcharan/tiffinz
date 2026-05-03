@@ -50,7 +50,7 @@ function LoginForm() {
     }
   }, [user, searchParams, isLoggedIn, router]);
   const toggleShowPassword = (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
   ) => {
     e.preventDefault();
     setShowPassword(!showPassword);
@@ -80,7 +80,7 @@ function LoginForm() {
     const { user, error } = result;
     if (error) {
       setError("root", { message: error.message });
-      console.error("Login failed:", error);
+
       toast.error("Login failed: " + error.message);
       return;
     }

@@ -8,7 +8,6 @@ export async function proxy(req: NextRequest) {
   const token = req.cookies.get("accessToken")?.value;
   const refreshToken = req.cookies.get("refreshToken")?.value;
   const response = NextResponse.next();
-  console.log("running proxy", pathname);
 
   if (pathname.startsWith("/dashboard")) {
     if (!token) {
@@ -16,12 +15,12 @@ export async function proxy(req: NextRequest) {
         return NextResponse.redirect(
           new URL(
             `/refresh-session?redirect=${encodeURIComponent(pathname)}`,
-            req.url
-          )
+            req.url,
+          ),
         );
       }
       return NextResponse.redirect(
-        new URL(`/login?redirect=${pathname.substring(1)}`, req.url)
+        new URL(`/login?redirect=${pathname.substring(1)}`, req.url),
       );
     }
   }
@@ -36,7 +35,6 @@ export async function proxy(req: NextRequest) {
   }
 
   if (pathname.startsWith("/api")) {
-    console.log("inside /api pathname", pathname);
     if (!token) {
       return ApiResponse.error("Authentication required", 401);
     }
