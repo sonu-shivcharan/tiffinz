@@ -4,7 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers/providers";
 
 import InstallPrompt from "@/components/ui/pwa-install-button";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,11 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.className} antialiased bg-background`}>
         <Providers>{children}</Providers>
-        <Toaster
-          position="top-right"
-          duration={30000}
-          richColors
-        />
+        <Toaster position="top-right" />
         <InstallPrompt />
       </body>
     </html>
