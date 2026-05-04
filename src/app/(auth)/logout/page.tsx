@@ -23,7 +23,7 @@ const LogoutPage = () => {
           toast.success("Logged out successfully");
         })
         .catch((error) => {
-          toast.error("Failed to logout: " + error.message);
+          console.log("Failed to logout: " + error.message);
         })
         .finally(() => {
           queryClient.clear();
