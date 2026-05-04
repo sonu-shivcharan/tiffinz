@@ -21,6 +21,7 @@ const sessionScehma = new Schema<ISession>(
     },
     refreshToken: {
       type: String,
+      unique: true,
     },
     verifyEmailToken: {
       type: String,
@@ -35,9 +36,10 @@ const sessionScehma = new Schema<ISession>(
       type: Date,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
+sessionScehma.index({ user: 1, refreshToken: 1 });
 const Session = models?.Session || model<ISession>("Session", sessionScehma);
 
 export type { ISession };

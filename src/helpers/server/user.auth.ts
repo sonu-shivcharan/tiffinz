@@ -173,8 +173,8 @@ async function logoutUser() {
   }
   await connectDB();
   const deletedSession = await Session.findOneAndDelete({
-    refreshToken: refreshTokenFromClient,
     user: payload._id,
+    refreshToken: refreshTokenFromClient,
   }).lean();
 
   if (!deletedSession) {
