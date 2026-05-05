@@ -1,3 +1,5 @@
+import { TransactionType } from "@/constants/enum";
+import Account from "@/models/account.model";
 import Transaction, { ITransaction } from "@/models/transaction.model";
 import { ApiError } from "@/utils/apiError";
 import connectDB from "@/utils/dbConnect";
@@ -83,28 +85,6 @@ async function getTransactionWithPopuplatedFields(
         ...(userId && { user: new Types.ObjectId(userId) }),
       },
     },
-    ...(userId
-      ? [
-          {
-            $lookup: {
-              from: "users",
-              localField: "user",
-              foreignField: "_id",
-              as: "user",
-              pipeline: [
-                {
-                  $project: {
-                    _id: 1,
-                    fullname: 1,
-                    email: 1,
-                    role: 1,
-                  },
-                },
-              ],
-            },
-          },
-        ]
-      : []),
     {
       $lookup: {
         from: "meallogs",
@@ -231,13 +211,43 @@ async function getTransactionWithPopuplatedFields(
 type CreateTransactionDocParams = {
   data: ITransaction;
   session: ClientSession;
+  currentBalance?: number;
 };
+
+/**
+ *
+ * @param data - transaction data
+ * @param session - mongoose client session for transaction
+ * @returns created transaction document
+ * @description This function creates a transaction document and calculates the opening and closing balance based on the transaction type. It uses the provided session for transaction management.
+ *  ### **Note**:
+ *  - This function does not update the account balance, it only creates the transaction document. The account balance should be updated separately to ensure data consistency, especially when using transactions.
+ *  - account balance should be updated in the same transaction to maintain data integrity. You can use the `updateAccountBalance` function to update the account balance.
+ *  - If the `openingBalance` is not provided in the `data`, it will fetch the current balance from the account document. This is to ensure that the transaction document has accurate opening and closing balance values.
+ */
 async function createTransactionDoc({
   data,
+
   session,
 }: CreateTransactionDocParams) {
+  await connectDB();
   try {
-    const newTransaction = await Transaction.create([data], { session });
+    let openingBalance = 0;
+    if (data.openingBalance !== undefined) {
+      openingBalance = data.openingBalance;
+    } else {
+      const account = await Account.findById(data.account).session(session);
+      openingBalance = account?.balance || 0;
+    }
+    const closingBalance =
+      data.type === TransactionType.credit
+        ? openingBalance + data.amount
+        : openingBalance - data.amount;
+
+    const newTransaction = await Transaction.create(
+      [{ ...data, openingBalance, closingBalance }],
+      { session },
+    );
     if (!newTransaction || newTransaction.length === 0) {
       throw new ApiError("Failed to create a transaction");
     }
