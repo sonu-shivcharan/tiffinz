@@ -83,9 +83,10 @@ async function updateUserAccountBalance(data: UpdateUserAccountBalanceParams) {
 }
 
 type UpdateAccountBalanceParams = {
-  accountId: string;
+  accountId: string | undefined;
   type: TransactionType;
   amount: number;
+  userId?: string;
   session?: ClientSession;
 };
 /*
@@ -96,24 +97,29 @@ async function updateAccountBalance({
   accountId,
   amount,
   type,
+  userId,
   session,
 }: UpdateAccountBalanceParams) {
-  if (!isValidObjectId(accountId)) {
+  console.log("accountId", accountId);
+  if (!isValidObjectId(accountId) && !isValidObjectId(userId)) {
     throw new ApiError("Invalid Account ID", 400);
   }
   await connectDB();
-  const account = await Account.findById<IAccount>(accountId);
-  if (!account) {
-    throw new ApiError("Account not found", 404);
-  }
   try {
-    if (type === TransactionType.debit) {
-      account.balance -= amount;
-    } else {
-      account.balance += amount;
+    const updatedAccount = await Account.findOneAndUpdate(
+      { ...(accountId ? { _id: accountId } : { user: userId }) },
+      {
+        $inc: {
+          balance: type === TransactionType.debit ? -amount : amount,
+        },
+      },
+      { new: true, session },
+    );
+
+    if (!updatedAccount) {
+      throw new ApiError("Account not found", 404);
     }
-    await account.save({ session, validateBeforeSave: false });
-    return account;
+    return updatedAccount;
   } catch (error) {
     session?.abortTransaction();
     console.error("Error while updating account balance", error);
