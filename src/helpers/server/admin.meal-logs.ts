@@ -5,8 +5,8 @@ import { ApiError } from "@/utils/apiError";
 import connectDB from "@/utils/dbConnect";
 import { MealLogSchemaInputType } from "@/zod/mealLog.schema";
 import mongoose, { isValidObjectId, Types } from "mongoose";
-import Transaction, { ITransaction } from "@/models/transaction.model";
-import { createTransaction } from "./transactions";
+import { ITransaction } from "@/models/transaction.model";
+import { createTransaction, createTransactionDoc } from "./transactions";
 import { updateAccountBalance } from "./admin.add-balance";
 import { handleError } from "@/utils/handleError";
 import Account from "@/models/account.model";
@@ -126,33 +126,41 @@ async function markAsMealTaken(
       session,
     });
     const totalAmountToDeduct = mealLog[0].totalAmount;
-    const userAccount = await Account.findOneAndUpdate(
+    const updatedAccount = await Account.findOneAndUpdate(
       { user: userId },
       {
         $inc: { balance: -totalAmountToDeduct },
       },
       { new: true, session },
     );
-
+    // if account not found, throw an error to abort the transaction
+    if (!updatedAccount) {
+      throw new ApiError("Account not found for the user", 404);
+    }
+    const closingBalance = updatedAccount.balance;
+    const openingBalance = closingBalance + totalAmountToDeduct;
     // now create a transaction doc
     const transactionDoc: ITransaction = {
-      account: userAccount._id,
+      account: updatedAccount._id,
       amount: totalAmountToDeduct,
       isMeal: true,
       type: TransactionType.debit,
       user: new Types.ObjectId(userId),
       mealLog: mealLog[0]._id,
+      openingBalance: openingBalance,
       ...(description && { description }),
     };
-    const newTransaction = await Transaction.create([transactionDoc], {
+    const newTransaction = await createTransactionDoc({
+      data: transactionDoc,
       session,
     });
+
     await session.commitTransaction();
     return {
-      transactionId: newTransaction[0]._id,
-      userAccount,
+      transactionId: newTransaction._id,
+      userAccount: updatedAccount,
       mealLog: mealLog[0],
-      transaction: newTransaction[0],
+      transaction: newTransaction,
     };
   } catch (error) {
     await session.abortTransaction();
