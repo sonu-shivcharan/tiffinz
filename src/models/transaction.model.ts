@@ -16,6 +16,8 @@ interface ITransaction {
   mealLog?: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
   account: mongoose.Types.ObjectId;
+  openingBalance?: number;
+  closingBalance?: number;
   description?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -28,6 +30,12 @@ const transactionSchema = new Schema<ITransaction>(
     amount: {
       type: Number,
       required: true,
+    },
+    openingBalance: {
+      type: Number,
+    },
+    closingBalance: {
+      type: Number,
     },
     type: {
       type: String,
