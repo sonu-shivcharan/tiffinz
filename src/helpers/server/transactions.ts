@@ -227,7 +227,6 @@ type CreateTransactionDocParams = {
  */
 async function createTransactionDoc({
   data,
-
   session,
 }: CreateTransactionDocParams) {
   await connectDB();
