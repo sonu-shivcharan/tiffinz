@@ -51,6 +51,7 @@ const addBalanceToUserAccount = withAuth<{ id: string }>(
           type: parsedType,
           isMeal: false,
           description,
+          closingBalance: updatedAccount.balance,
         },
         session,
       });
