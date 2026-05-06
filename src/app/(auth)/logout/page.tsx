@@ -29,6 +29,8 @@ const LogoutPage = () => {
           queryClient.clear();
           router.replace("/login?loggedOut=true");
         });
+    } else {
+      router.replace("/login");
     }
   }, [isLoggedIn, dispatch, queryClient, router]);
 
