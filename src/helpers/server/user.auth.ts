@@ -117,7 +117,7 @@ async function loginUser(
 }
 
 const cookieFlags = {
-  sameSite: true,
+  sameSite: "lax" as const,
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
 };
