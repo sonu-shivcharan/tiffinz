@@ -7,7 +7,7 @@ import { formatToIndianCurrency } from "@/lib/utils";
 import { getDateAndTimeString } from "@/lib/date-format";
 
 function MealLogCard({ mealLog }: { mealLog: MealLogPopulatedType }) {
-  const { meal, totalAmount, extras } = mealLog;
+  const { meal, totalAmount, extras, mealFor } = mealLog;
   if (!meal) return <div className="mx-auto">meal details not found</div>;
   console.log("meal", meal);
   return (
@@ -16,6 +16,7 @@ function MealLogCard({ mealLog }: { mealLog: MealLogPopulatedType }) {
         <div>
           <CardTitle className="text-lg">Meal Details</CardTitle>
           <p className="text-sm text-muted-foreground">{mealLog.description}</p>
+          <Badge variant="success">{mealFor}</Badge>
         </div>
 
         <div className="flex items-center gap-3">
@@ -51,6 +52,7 @@ function MealLogCard({ mealLog }: { mealLog: MealLogPopulatedType }) {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold">{String(meal.name)}</h4>
+
             <p className="text-xs text-muted-foreground">{meal.description}</p>
             <p className="text-xs text-muted-foreground">
               Meal SKU / reference:{" "}
