@@ -3,19 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Loader from "@/components/ui/Loader";
 import { TransactionType, UserRole } from "@/constants/enum";
-
 import { getTransactionById } from "@/helpers/client/admin.transactions";
 import { getUserTransactionById } from "@/helpers/client/user.transactions";
-
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { getDateAndTimeString } from "@/lib/date-format";
-import { cn, formatToIndianCurrency } from "@/lib/utils";
+import { formatToIndianCurrency } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 import { useQuery } from "@tanstack/react-query";
 import MealLogCard from "../meals/MealLogCard";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 function UserTransactionDetailsCard({
   transactionId,
@@ -41,10 +38,8 @@ function UserTransactionDetailsCard({
     return <Loader />;
   }
   console.log("data", transaction);
-  const isCredit = transaction.type === TransactionType.credit;
-  const amount = `${isCredit ? "+" : "-"} ${formatToIndianCurrency(
-    transaction.amount,
-  )}`;
+
+  const amount = formatToIndianCurrency(transaction.amount);
   const { openingBalance, closingBalance, description } = transaction;
 
   return (
@@ -54,9 +49,6 @@ function UserTransactionDetailsCard({
           <CardTitle className="text-2xl font-semibold">
             Transaction Details
           </CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
           {/* User Info */}
           {userRole === UserRole.admin && (
             <>
@@ -76,6 +68,7 @@ function UserTransactionDetailsCard({
                       </AvatarFallback>
                     </Avatar>
                   </Link>
+
                   <div>
                     <h3 className="text-lg font-semibold">
                       {transaction.user.fullName}
@@ -85,79 +78,86 @@ function UserTransactionDetailsCard({
                     </p>
                   </div>
                 </div>
-                <div>
-                  <p>{transaction.user.phone}</p>
+
+                <p className="text-sm">{transaction.user.phone}</p>
+              </div>
+            </>
+          )}
+        </CardHeader>
+
+        <Separator />
+        <CardContent className="space-y-6">
+          {/* Transaction ID */}
+          <div className="text-sm text-muted-foreground">
+            Transaction ID: {String(transaction._id)}
+          </div>
+
+          {/* Amount + Type */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-2">
+            <div className="text-xl font-bold">{amount}</div>
+
+            <div className="text-xs text-muted-foreground flex flex-col items-center md:items-end gap-1">
+              <Badge
+                variant={
+                  transaction.type === TransactionType.credit
+                    ? "default"
+                    : "destructive"
+                }
+              >
+                {transaction.type}
+              </Badge>
+              <p>{getDateAndTimeString(transaction.createdAt)}</p>
+            </div>
+          </div>
+
+          {/* Balances */}
+          {(openingBalance !== undefined || closingBalance !== undefined) && (
+            <>
+              <Separator />
+
+              <div className="flex flex-col gap-3 text-sm ">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Opening Balance</span>
+                  <span className="font-medium">
+                    {formatToIndianCurrency(openingBalance)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Closing Balance</span>
+                  <span className="font-medium">
+                    {formatToIndianCurrency(closingBalance)}
+                  </span>
                 </div>
               </div>
             </>
           )}
 
-          {/* Transaction Details */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 text-sm items-center">
-            <p className="text-sm opacity-90 mt-1">
-              Transaction ID: {String(transaction._id)}
-            </p>
-            <div className="col-span-2 gap-y-4 text-center p-4 flex flex-col md:flex-row  justify-between items-center rounded-lg  bg-muted/60">
-              <div className={cn("text-xl font-bold")}>{amount}</div>
-              <div className="text-xs text-muted-foreground flex flex-col md:items-end gap-2">
-                <p>
-                  <Badge
-                    variant={
-                      transaction.type === TransactionType.credit
-                        ? "default"
-                        : "destructive"
-                    }
-                  >
-                    {transaction.type}
-                  </Badge>
-                </p>
-                <p>{getDateAndTimeString(transaction.createdAt)}</p>
-              </div>
-            </div>
+          {/* Description */}
+          {description && (
+            <>
+              <Separator />
 
-            {(openingBalance !== undefined || closingBalance !== undefined) && (
-              <div className="col-span-2 flex justify-center items-center text-lg font-medium gap-4">
-                <div
-                  className="text-center cursor-pointer"
-                  title="Opening Balance"
-                >
-                  <div className="text-xs text-muted-foreground">Opening</div>
-                  <div className="text-accent-foreground">
-                    {formatToIndianCurrency(openingBalance)}
-                  </div>
-                </div>
-
-                <div className="mx-2 text-muted-foreground">
-                  <ArrowRight />
-                </div>
-
-                <div
-                  className="text-center cursor-pointer"
-                  title="Closing Balance"
-                >
-                  <div className="text-xs text-muted-foreground">Closing</div>
-                  <div className="text-accent-foreground">
-                    {formatToIndianCurrency(closingBalance)}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {description && (
               <div>
                 <span className="font-medium text-muted-foreground">
                   Remark:
                 </span>
-                <p className={cn("text-sm text-muted-foreground")}>
+                <p className="text-sm text-muted-foreground">
                   {transaction.description || "-"}
                 </p>
               </div>
-            )}
-          </div>
+            </>
+          )}
 
-          {transaction.isMeal && <Badge>Meal Transaction</Badge>}
+          {transaction.isMeal && (
+            <>
+              <Separator />
+              <Badge>Meal Transaction</Badge>
+            </>
+          )}
         </CardContent>
       </Card>
+
       {transaction.isMeal && <MealLogCard mealLog={transaction.mealLog} />}
     </>
   );
