@@ -232,16 +232,36 @@ async function createTransactionDoc({
   await connectDB();
   try {
     let openingBalance = 0;
-    if (data.openingBalance !== undefined) {
-      openingBalance = data.openingBalance;
-    } else {
+    let closingBalance = 0;
+    if (
+      data.openingBalance === undefined &&
+      data.closingBalance === undefined
+    ) {
+      // Fetch the current balance from the account document if openingBalance or closingBalance is not provided
       const account = await Account.findById(data.account).session(session);
-      openingBalance = account?.balance || 0;
+      if (!account) {
+        throw new ApiError("Account not found", 404);
+      }
+      openingBalance = account.balance;
+      closingBalance =
+        data.type === TransactionType.credit
+          ? openingBalance + data.amount
+          : openingBalance - data.amount;
+    } else if (data.openingBalance !== undefined) {
+      // derive closing balance from opening balance and transaction amount if openingBalance is provided
+      openingBalance = data.openingBalance;
+      closingBalance =
+        data.type === TransactionType.credit
+          ? openingBalance + data.amount
+          : openingBalance - data.amount;
+    } else if (data.closingBalance !== undefined) {
+      // derive opening balance from closing balance and transaction amount if closingBalance is provided
+      closingBalance = data.closingBalance;
+      openingBalance =
+        data.type === TransactionType.credit
+          ? closingBalance - data.amount
+          : closingBalance + data.amount;
     }
-    const closingBalance =
-      data.type === TransactionType.credit
-        ? openingBalance + data.amount
-        : openingBalance - data.amount;
 
     const newTransaction = await Transaction.create(
       [{ ...data, openingBalance, closingBalance }],
