@@ -2,7 +2,9 @@
 import {
   BadgeIndianRupee,
   Home,
+  List,
   LucideOctagon,
+  Package,
   PlusCircleIcon,
   // Search,
   Settings,
@@ -48,10 +50,23 @@ const sidebarItems: ISidebarItem[] = [
     icon: User,
     onlyForAdmin: true, // Only for admin users
   },
+
   {
     title: "Transactions",
     url: "/dashboard/transactions",
     icon: BadgeIndianRupee,
+  },
+  {
+    title: "Meals",
+    url: "/dashboard/meals",
+    icon: List,
+    onlyForAdmin: true, // Only for admin users
+  },
+  {
+    title: "Orders",
+    url: "/dashboard/orders",
+    icon: Package,
+    onlyForAdmin: true, // Only for admin users
   },
   // {
   //   title: "Accounts",
@@ -84,13 +99,15 @@ export function AppSidebar() {
   const currentUserRole = useAppSelector((state) => state.auth.user?.role);
 
   if (!pathname.startsWith("/dashboard")) {
-    return null; 
+    return null;
   }
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenuButton> <LucideOctagon />
+        <SidebarMenuButton>
+          {" "}
+          <LucideOctagon />
           <span className="text-lg font-semibold text-foreground">Tiffinz</span>
         </SidebarMenuButton>
       </SidebarHeader>
