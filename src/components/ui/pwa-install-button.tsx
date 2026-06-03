@@ -17,10 +17,10 @@ import { usePathname } from "next/navigation";
 export default function InstallPrompt() {
   const { isInstallable, promptInstall } = usePWAInstall();
   const [open, setOpen] = useState(true);
-  const pathname = usePathname()
-
-  if (!pathname.startsWith('/dashboard')) return null;
-  if (!isInstallable || !open ) return null;
+  const pathname = usePathname();
+  if (process.env.NODE_ENV === "development") return null;
+  if (!pathname.startsWith("/dashboard")) return null;
+  if (!isInstallable || !open) return null;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
