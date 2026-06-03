@@ -2,14 +2,14 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Loader from "@/components/ui/Loader";
-import { getAllMealLogs } from "@/helpers/client/meal";
-import { useQuery } from "@tanstack/react-query";
 import { formatToIndianCurrency } from "@/lib/utils";
 import { getSmartDate } from "@/lib/date-format";
 import { Button } from "@/components/ui/button";
 import { PaginatedResult } from "@/helpers/client/client.types";
 import { ArrowRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { getAllMealLogs } from "@/helpers/client/meal";
 
 export type MealLogListItemType = {
   _id: string;
@@ -20,17 +20,57 @@ export type MealLogListItemType = {
   status?: string;
 };
 
-function MealLogsList({ userId }: { userId: string }) {
-  const { data, error, isLoading } = useQuery<
+export function MealLogsListSkeleton() {
+  return (
+    <Card className="w-full md:max-w-md mx-auto bg-transparent shadow-none px-0 mt-2">
+      <CardHeader>
+        <CardTitle className="text-xl font-semibold">Recent Tiffins</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0 mt-0 border-t">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="flex justify-between items-center p-4 border-b">
+            <div className="flex gap-2 flex-col justify-center">
+              <Skeleton className="h-5 w-12 rounded-full" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            <div className="text-right">
+              <Skeleton className="h-5 w-16" />
+            </div>
+          </div>
+        ))}
+      </CardContent>
+      <div className="text-center mt-4">
+        <Skeleton className="h-9 w-28 mx-auto rounded-md" />
+      </div>
+    </Card>
+  );
+}
+
+interface MealLogsListProps {
+  userId: string;
+  data?: PaginatedResult<MealLogListItemType> | null;
+  error?: Error | null;
+  isLoading?: boolean;
+}
+
+function MealLogsList({ userId, data: propData, error: propError, isLoading: propIsLoading }: MealLogsListProps) {
+  const hasProps = propData !== undefined;
+
+  const { data: queryData, error: queryError, isLoading: queryLoading } = useQuery<
     PaginatedResult<MealLogListItemType>
   >({
     queryKey: ["getUserMealLogs", userId],
     queryFn: () => getAllMealLogs({ userId, limit: 5 }),
     refetchOnWindowFocus: false,
+    enabled: !hasProps,
   });
 
+  const data = hasProps ? propData : queryData;
+  const error = hasProps ? propError : queryError;
+  const isLoading = hasProps ? propIsLoading : queryLoading;
+
   if (isLoading) {
-    return <Loader />;
+    return <MealLogsListSkeleton />;
   }
 
   if (error) {
@@ -40,6 +80,7 @@ function MealLogsList({ userId }: { userId: string }) {
       </div>
     );
   }
+
   const logs = data?.docs || [];
   if (!logs || logs.length === 0) {
     return null;
@@ -48,14 +89,14 @@ function MealLogsList({ userId }: { userId: string }) {
   return (
     <Card className="w-full md:max-w-md mx-auto bg-transparent shadow-none px-0 mt-2">
       <CardHeader>
-        <CardTitle>Recent Tiffins</CardTitle>
+        <CardTitle className="text-xl font-semibold">Recent Tiffins</CardTitle>
       </CardHeader>
       <CardContent className="p-0 mt-0 border-t">
         {logs.map((mealLog) => (
           <MealLogListItem key={String(mealLog._id)} mealLog={mealLog} />
         ))}
       </CardContent>
-      <div className=" text-center">
+      <div className="text-center mt-4">
         <Button variant="outline" size="sm" className="px-8" asChild>
           <Link href={`/dashboard/meal-logs?user=${userId}`} prefetch={false}>
             View All <ArrowRight className="ml-1" />
@@ -69,7 +110,6 @@ function MealLogsList({ userId }: { userId: string }) {
 export function MealLogListItem({ mealLog }: { mealLog: MealLogListItemType }) {
   const dateValue = mealLog.date ? getSmartDate(mealLog.date) : "-";
   const amountValue = formatToIndianCurrency(mealLog.totalAmount ?? 0);
-  // const loggedAtValue = getSmartDate(mealLog.createdAt ?? "");
 
   return (
     <Link href={`/dashboard/meal-logs/${mealLog._id}`} prefetch={false}>
@@ -87,9 +127,6 @@ export function MealLogListItem({ mealLog }: { mealLog: MealLogListItemType }) {
 
         <div className="text-right">
           <span className="font-medium text-shadow-muted">{amountValue}</span>
-          {/* <p className="text-xs text-muted-foreground">
-            Logged: {loggedAtValue}
-          </p> */}
         </div>
       </div>
     </Link>
@@ -97,3 +134,4 @@ export function MealLogListItem({ mealLog }: { mealLog: MealLogListItemType }) {
 }
 
 export default MealLogsList;
+
