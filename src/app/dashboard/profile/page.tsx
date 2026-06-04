@@ -1,17 +1,18 @@
 "use client";
-import UserProfile from '@/components/dashboard/profile/UserProfile';
-import { useAuth } from '@/hooks/useAuth';
-import Loader from '@/components/ui/Loader';
+import UserProfile from "@/components/dashboard/profile/UserProfile";
+import { useAuth } from "@/hooks/useAuth";
+import Loader from "@/components/ui/Loader";
 
 
 function ProfilePage() {
   const { user } = useAuth();
-  if(!user) return <Loader />
+  if (!user) return <Loader />;
   return (
     <>
-        <UserProfile user={user} />
+      <UserProfile user={user} />
+      
     </>
-  )
+  );
 }
 
-export default ProfilePage
+export default ProfilePage;
