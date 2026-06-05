@@ -32,11 +32,6 @@ const AvatarUpload = () => {
   const avatarUploadRef = useRef<HTMLInputElement>(null);
   const [avatarEditorOpen, setAvatarEditorOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  useEffect(() => {
-    // return () => {
-    //   setSelectedImage(null);
-    // };
-  }, [selectedImage]);
   const handleAvatarClick = () => {
     avatarUploadRef.current?.click();
   };
@@ -46,6 +41,13 @@ const AvatarUpload = () => {
     if (file) {
       setSelectedImage(file);
       setAvatarEditorOpen(true);
+    }
+  };
+  const handleDialogOpenChange = (open: boolean) => {
+    setAvatarEditorOpen(open);
+
+    if (!open) {
+      setSelectedImage(null);
     }
   };
 
@@ -73,7 +75,7 @@ const AvatarUpload = () => {
           <Camera className=" h-10 w-10 text-muted-foreground" />
         </Button>
       </Avatar>
-      <Dialog open={avatarEditorOpen} onOpenChange={setAvatarEditorOpen}>
+      <Dialog open={avatarEditorOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit</DialogTitle>
@@ -100,18 +102,26 @@ const SelectedImagePreview = ({
   const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>();
+  useEffect(() => {
+    const url = selectedImage ? URL.createObjectURL(selectedImage) : undefined;
+    setPreviewUrl(url);
+    return () => {
+      if (url) return URL.revokeObjectURL(url);
+    };
+  }, [selectedImage]);
 
   const handlePoiterDown = (e: React.PointerEvent<HTMLImageElement>) => {
     const x = e.clientX;
     const y = e.clientY;
+    e.currentTarget.setPointerCapture(e.pointerId);
     setDragStart({ x, y });
     setDragOrigin(position);
-    console.log("poiner down", { x, y });
+    // console.log("poiner down", { x, y });
   };
   const handlePointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
     if (e.buttons !== 1) return; // Only move when left mouse button is pressed
 
-    e.currentTarget.setPointerCapture(e.pointerId);
     const x = e.clientX;
     const y = e.clientY;
     const deltaX = x - dragStart.x;
@@ -120,7 +130,7 @@ const SelectedImagePreview = ({
       x: dragOrigin.x + deltaX,
       y: dragOrigin.y + deltaY,
     });
-    console.log("poiner move", { x, y }, { deltaX, deltaY });
+    // console.log("poiner move", { x, y }, { deltaX, deltaY });
   };
   const handlePointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
     if (e.buttons !== 1) return; // Only move when left mouse button is released
@@ -129,10 +139,10 @@ const SelectedImagePreview = ({
     const y = e.clientY;
     const deltaX = x - dragStart.x;
     const deltaY = y - dragStart.y;
-    setPosition((prev) => ({
-      x: prev.x + deltaX,
-      y: prev.y + deltaY,
-    }));
+    setPosition({
+      x: dragOrigin.x + deltaX,
+      y: dragOrigin.y + deltaY,
+    });
   };
   const handleScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newScale = parseFloat(e.target.value);
@@ -140,11 +150,22 @@ const SelectedImagePreview = ({
   };
   const handleImageSave = () => {
     const canvas = canvasRef.current;
-    if (canvas && imageRef.current) {
-      const ctx = canvas.getContext("2d");
-      ctx?.clearRect(0, 0, canvas.width, canvas.height);
-      ctx?.drawImage(imageRef.current, 0, 0);
+    const image = imageRef.current;
+
+    if (!image) {
+      return;
     }
+    if (!canvas) {
+      return;
+    }
+
+    canvas.width = 600;
+    canvas.height = 600;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    console.log("selectedImage", selectedImage);
   };
   // console.log(position);
 
@@ -158,15 +179,13 @@ const SelectedImagePreview = ({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             ref={imageRef}
-            src={URL.createObjectURL(selectedImage!)}
+            src={previewUrl}
             alt="Selected Avatar"
-            width={200}
-            height={200}
             onPointerDown={handlePoiterDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             draggable={false}
-            className="w-full h-fit cursor-move select-none duration-10"
+            className="w-full cursor-move select-none"
             style={{
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale * 0.05})`,
             }}
@@ -184,7 +203,7 @@ const SelectedImagePreview = ({
       <Button onClick={handleImageSave} variant={"outline"}>
         Save
       </Button>
-      <canvas ref={canvasRef} className=""></canvas>
+      <canvas ref={canvasRef} className="w-full border"></canvas>
     </div>
   );
 };
