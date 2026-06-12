@@ -1,15 +1,17 @@
 "use client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import { DialogDescription } from "@radix-ui/react-dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+  AlertDialogHeader,
+} from "@/components/ui/alert-dialog";
+
 import { Camera } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -75,33 +77,34 @@ const AvatarUpload = () => {
           <Camera className=" h-10 w-10 text-muted-foreground" />
         </Button>
       </Avatar>
-      <Dialog open={avatarEditorOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit</DialogTitle>
-            <DialogDescription className="text-sm sr-only">
+      <AlertDialog
+        open={avatarEditorOpen}
+        onOpenChange={handleDialogOpenChange}
+      >
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm sr-only">
               Edit your avatar image. You can crop and adjust the image before
               saving.
-            </DialogDescription>
-            <SelectedImagePreview selectedImage={selectedImage} />
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+            <ImageEditor selectedImage={selectedImage} />
+          </AlertDialogHeader>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
-const SelectedImagePreview = ({
-  selectedImage,
-}: {
-  selectedImage?: File | null;
-}) => {
+const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
   const [scale, setScale] = useState(50);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragOrigin, setDragOrigin] = useState({ x: 0, y: 0 });
+
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageCropAreaRef = useRef<HTMLDivElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
   useEffect(() => {
     const url = selectedImage ? URL.createObjectURL(selectedImage) : undefined;
@@ -117,10 +120,9 @@ const SelectedImagePreview = ({
     e.currentTarget.setPointerCapture(e.pointerId);
     setDragStart({ x, y });
     setDragOrigin(position);
-    // console.log("poiner down", { x, y });
   };
   const handlePointerMove = (e: React.PointerEvent<HTMLImageElement>) => {
-    if (e.buttons !== 1) return; // Only move when left mouse button is pressed
+    if (e.buttons !== 1) return;
 
     const x = e.clientX;
     const y = e.clientY;
@@ -130,7 +132,6 @@ const SelectedImagePreview = ({
       x: dragOrigin.x + deltaX,
       y: dragOrigin.y + deltaY,
     });
-    // console.log("poiner move", { x, y }, { deltaX, deltaY });
   };
   const handlePointerUp = (e: React.PointerEvent<HTMLImageElement>) => {
     if (e.buttons !== 1) return; // Only move when left mouse button is released
@@ -148,10 +149,13 @@ const SelectedImagePreview = ({
     const newScale = parseFloat(e.target.value);
     setScale(newScale);
   };
-  const handleImageSave = () => {
+  const handleImageSave = async () => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
-
+    const imageCropArea = imageCropAreaRef.current;
+    if (!imageCropArea) {
+      return;
+    }
     if (!image) {
       return;
     }
@@ -159,19 +163,21 @@ const SelectedImagePreview = ({
       return;
     }
 
-    canvas.width = 600;
-    canvas.height = 600;
+    canvas.width = 400;
+    canvas.height = 400;
+    const file = await getCroppedImageFile({ canvas, image, position, scale });
+    if (!file) {
+      throw new Error("failed to crop image");
+    }
+    console.log("file", file);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-
-    console.log("selectedImage", selectedImage);
+    //TODO: handle upload the image
   };
-  // console.log(position);
 
   return (
-    <div className="flex-col items-center justify-center">
+    <div className="flex-col">
       <div
+        ref={imageCropAreaRef}
         id="image-crop-area"
         className="w-full aspect-square md:w-[400px] md:h-[400px] bg-muted overflow-hidden border-4 border-blue-500 mx-auto"
       >
@@ -185,8 +191,9 @@ const SelectedImagePreview = ({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             draggable={false}
-            className="w-full cursor-move select-none"
+            className="w-full h-auto cursor-move select-none"
             style={{
+              transformOrigin: "top left",
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale * 0.05})`,
             }}
           />
@@ -203,9 +210,83 @@ const SelectedImagePreview = ({
       <Button onClick={handleImageSave} variant={"outline"}>
         Save
       </Button>
-      <canvas ref={canvasRef} className="w-full border"></canvas>
+      <canvas ref={canvasRef} className="w-full border hidden"></canvas>
     </div>
   );
 };
 
 export default UserProfileUpdateForm;
+
+type GetCroppedImageFilePorps = {
+  canvas: HTMLCanvasElement;
+  image: HTMLImageElement;
+  position: { x: number; y: number };
+  scale: number;
+};
+async function getCroppedImageFile({
+  canvas,
+  image,
+  position,
+  scale,
+}: GetCroppedImageFilePorps) {
+  const cropSize = 400;
+
+  const { naturalHeight, naturalWidth, clientHeight, clientWidth } = image;
+
+  const zoom = scale * 0.05;
+  const displayedImageWidth = clientWidth * zoom;
+  const displayedImageHeight = clientHeight * zoom;
+
+  const sourceWidth = naturalWidth * (cropSize / displayedImageWidth);
+  const sourceHeight = naturalHeight * (cropSize / displayedImageHeight);
+  const sourceX = (-position.x / displayedImageWidth) * naturalWidth;
+
+  const sourceY = (-position.y / displayedImageHeight) * naturalHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  console.log({
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+  });
+  console.log("selectedImage", {
+    position,
+    scale,
+    naturalWidth,
+    naturalHeight,
+    clientWidth,
+    clientHeight,
+  });
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+
+  ctx.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+  const newImageFile = await canvasToFile(canvas);
+  return newImageFile;
+}
+
+function canvasToFile(canvas: HTMLCanvasElement) {
+  return new Promise<File>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Failed to create blob"));
+        return;
+      }
+
+      resolve(new File([blob], "avatar.png", { type: blob.type }));
+    });
+  });
+}
