@@ -6,6 +6,7 @@ import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/ApiResponse";
 import connectDB from "@/utils/dbConnect";
 import generateRefreshAndAccessToken from "@/utils/generateTokens";
+import { redis } from "@/utils/redis";
 import { verifyJWT } from "@/utils/verifyJWT";
 
 import {
@@ -300,6 +301,7 @@ async function updateUserAvatar(userId: string, avatarUrl: string) {
   if (!isValidObjectId(userId)) {
     throw new ApiError("Invalid user id");
   }
+
   const {
     success,
     data: parsedUrl,
@@ -308,15 +310,19 @@ async function updateUserAvatar(userId: string, avatarUrl: string) {
   if (!success) {
     throw new ApiError("Inavlid url", 400, error);
   }
-  const user = await User.findByIdAndUpdate(userId, {
-    $set: {
-      avatarUrl: parsedUrl,
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      avatar: parsedUrl,
     },
-  });
+    { new: true },
+  ).select("-password");
 
   if (!user) {
     throw new ApiError("User not found", 404);
   }
+  await redis?.set(`user:${userId}`, user, { ex: 60 * 15 }).catch(null);
 
   return user;
 }

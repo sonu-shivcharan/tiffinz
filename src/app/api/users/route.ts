@@ -23,7 +23,7 @@ const updateUserAvatarRoute = withAuth(async (req, _, user) => {
   if (!data.newAvatarUrl) {
     throw new ApiError("Avatar url is required");
   }
-  const res = await updateUserAvatar(String(user?._id), data.avatarUrl);
+  const res = await updateUserAvatar(String(user?._id), data.newAvatarUrl);
   return ApiResponse.success(res, "User avatar updated successfully");
 });
 
