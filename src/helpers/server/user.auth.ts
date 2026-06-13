@@ -18,6 +18,7 @@ import { CreateUserByAdminInput } from "@/zod/user.schema";
 import { createHash } from "crypto";
 import { isValidObjectId } from "mongoose";
 import { cookies } from "next/headers";
+import { z } from "zod";
 
 async function doesUserAlreadyExist(userData: IUser | CreateUserByAdminInput) {
   // Check if user exists
@@ -295,6 +296,31 @@ async function resetPassword(userId: string, newPassword: string) {
   return { success: true };
 }
 
+async function updateUserAvatar(userId: string, avatarUrl: string) {
+  if (!isValidObjectId(userId)) {
+    throw new ApiError("Invalid user id");
+  }
+  const {
+    success,
+    data: parsedUrl,
+    error,
+  } = z.string().url().safeParse(avatarUrl);
+  if (!success) {
+    throw new ApiError("Inavlid url", 400, error);
+  }
+  const user = await User.findByIdAndUpdate(userId, {
+    $set: {
+      avatarUrl: parsedUrl,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
+  return user;
+}
+
 export {
   logoutUser,
   createUserSession,
@@ -304,4 +330,5 @@ export {
   doesUserAlreadyExist,
   verifyPasswordResetToken,
   resetPassword,
+  updateUserAvatar,
 };
