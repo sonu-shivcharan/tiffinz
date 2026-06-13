@@ -10,10 +10,20 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
   AlertDialogHeader,
+  AlertDialogFooter,
 } from "@/components/ui/alert-dialog";
 
-import { Camera } from "lucide-react";
+import { Camera, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useImageKit } from "@/hooks/useImageKit";
+import { toast } from "sonner";
+import { AlertDialogCancel } from "@radix-ui/react-alert-dialog";
+
+import { updateUserAvatar } from "@/helpers/client/user.auth";
+import { handleError } from "@/lib/handleError";
+import { useAuth } from "@/hooks/useAuth";
+import { IUser } from "@/models/user.model";
+import Loader from "@/components/ui/Loader";
 
 function UserProfileUpdateForm() {
   const { user } = useCurrentUser();
@@ -64,7 +74,11 @@ const AvatarUpload = () => {
         accept="image/*"
       />
       <Avatar className="h-20 w-20 rounded-full overflow-visible relative">
-        <AvatarImage src={user?.avatar} alt={user?.fullName} />
+        <AvatarImage
+          className="rounded-full"
+          src={user?.avatar}
+          alt={user?.fullName}
+        />
         <AvatarFallback className="text-xl font-bold">
           {user?.fullName.charAt(0).toUpperCase()}
         </AvatarFallback>
@@ -72,31 +86,48 @@ const AvatarUpload = () => {
           onClick={handleAvatarClick}
           variant="outline"
           size="icon"
-          className="absolute bottom-0 right-0 rounded-full p-0 px-0 py-0 size-9 border bg-accent! border-muted hover:bg-accent/80"
+          className="absolute bottom-0 right-0 rounded-full p-0 px-0 py-0 size-9 border bg-accent/60! border-muted-foreground"
         >
-          <Camera className=" h-10 w-10 text-muted-foreground" />
+          <Camera className=" h-6 w-6 text-accent-foreground" />
         </Button>
       </Avatar>
       <AlertDialog
         open={avatarEditorOpen}
         onOpenChange={handleDialogOpenChange}
       >
-        <AlertDialogContent className="max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Edit</AlertDialogTitle>
+        <AlertDialogContent className="overflow-y-auto  flex justify-items-start flex-col item min-w-dvw p-8 min-h-dvh md:min-w-fit md:max-w-lg md:min-h-fit ">
+          <AlertDialogHeader className="">
+            <div className="max-w-full flex justify-between items-center">
+              <AlertDialogTitle>Edit</AlertDialogTitle>
+              <AlertDialogCancel asChild>
+                <Button size={"icon"} variant={"outline"}>
+                  <XIcon />
+                </Button>
+              </AlertDialogCancel>
+            </div>
+
             <AlertDialogDescription className="text-sm sr-only">
               Edit your avatar image. You can crop and adjust the image before
               saving.
             </AlertDialogDescription>
-            <ImageEditor selectedImage={selectedImage} />
           </AlertDialogHeader>
+          <ImageEditor
+            onSuccess={() => handleDialogOpenChange(false)}
+            selectedImage={selectedImage}
+          />
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 };
 
-const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
+const ImageEditor = ({
+  selectedImage,
+  onSuccess,
+}: {
+  selectedImage?: File | null;
+  onSuccess?: () => void;
+}) => {
   const [scale, setScale] = useState(50);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -104,7 +135,6 @@ const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
 
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageCropAreaRef = useRef<HTMLDivElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string>();
   useEffect(() => {
     const url = selectedImage ? URL.createObjectURL(selectedImage) : undefined;
@@ -149,13 +179,14 @@ const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
     const newScale = parseFloat(e.target.value);
     setScale(newScale);
   };
+
+  const { error, isUploading, progress, uploader } = useImageKit();
+
+  const { setUser, user } = useAuth();
   const handleImageSave = async () => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
-    const imageCropArea = imageCropAreaRef.current;
-    if (!imageCropArea) {
-      return;
-    }
+
     if (!image) {
       return;
     }
@@ -165,21 +196,41 @@ const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
 
     canvas.width = 400;
     canvas.height = 400;
-    const file = await getCroppedImageFile({ canvas, image, position, scale });
-    if (!file) {
-      throw new Error("failed to crop image");
-    }
-    console.log("file", file);
+    try {
+      const file = await getCroppedImageFile({
+        canvas,
+        image,
+        position,
+        scale,
+      });
+      if (!file) {
+        throw new Error("failed to crop image");
+      }
 
-    //TODO: handle upload the image
+      const uploadedAvatar = await uploader(file);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      const avatarUrl = uploadedAvatar?.url;
+      if (!avatarUrl) {
+        toast.error("Failed to upload the profile picture");
+        return;
+      }
+      setUser({ ...(user as IUser), avatar: avatarUrl });
+      onSuccess?.();
+      await updateUserAvatar(avatarUrl);
+    } catch (error) {
+      const message = handleError(error, "Avatar update error").message;
+      toast.error(message);
+    }
   };
 
   return (
     <div className="flex-col">
       <div
-        ref={imageCropAreaRef}
         id="image-crop-area"
-        className="w-full aspect-square md:w-[400px] md:h-[400px] bg-muted overflow-hidden border-4 border-blue-500 mx-auto"
+        className="max-w-full aspect-square w-[400px] md:h-[400px] bg-muted overflow-hidden border-4 border-blue-500 mx-auto"
       >
         {selectedImage && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -199,17 +250,28 @@ const ImageEditor = ({ selectedImage }: { selectedImage?: File | null }) => {
           />
         )}
       </div>
-      <Input
-        type="range"
-        min="1"
-        max="100"
-        value={scale}
-        onChange={handleScaleChange}
-        className="w-full mt-4 transition-all duration-300"
-      />
-      <Button onClick={handleImageSave} variant={"outline"}>
-        Save
-      </Button>
+      <div className="max-w-[400px] mx-auto">
+        <Input
+          type="range"
+          min="1"
+          max="100"
+          value={scale}
+          onChange={handleScaleChange}
+          className="w-full mx-auto mt-4 transition-all duration-300"
+        />
+
+        <AlertDialogFooter className=" mt-10">
+          <div className="grid grid-cols-2 w-full gap-4">
+            <AlertDialogCancel asChild className="max-w-full">
+              <Button variant={"outline"}>Cancel</Button>
+            </AlertDialogCancel>
+            <Button onClick={handleImageSave}>
+              {isUploading ? <Loader text={`${progress}%`} /> : "Save"}
+            </Button>
+          </div>
+        </AlertDialogFooter>
+      </div>
+
       <canvas ref={canvasRef} className="w-full border hidden"></canvas>
     </div>
   );
@@ -246,20 +308,6 @@ async function getCroppedImageFile({
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  console.log({
-    sourceX,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-  });
-  console.log("selectedImage", {
-    position,
-    scale,
-    naturalWidth,
-    naturalHeight,
-    clientWidth,
-    clientHeight,
-  });
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
 

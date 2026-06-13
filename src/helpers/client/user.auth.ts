@@ -145,10 +145,24 @@ async function verifyPasswordResetToken(token: string, id: string) {
       params: { token, id },
     });
     const data = res.data.data;
-    return !data.success;
+    return data.success as boolean;
   } catch (error) {
     console.log("error", error);
     return false;
+  }
+}
+
+async function updateUserAvatar(avatarUrl: string) {
+  try {
+    const res = await axios.patch("/api/users", {
+      newAvatarUrl: avatarUrl,
+    });
+    const data = res.data.data;
+    return data.success;
+  } catch (error) {
+    console.log("error while updating user avatar", error);
+    const message = handleError(error, "update avatar").message;
+    throw new Error(message);
   }
 }
 export {
@@ -160,4 +174,5 @@ export {
   loginUserWithEmail,
   loginUserWithUsername,
   verifyPasswordResetToken,
+  updateUserAvatar,
 };
