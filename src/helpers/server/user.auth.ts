@@ -314,7 +314,9 @@ async function updateUserAvatar(userId: string, avatarUrl: string) {
   const user = await User.findByIdAndUpdate(
     userId,
     {
-      avatar: parsedUrl,
+      $set: {
+        avatar: parsedUrl,
+      },
     },
     { new: true },
   ).select("-password");
@@ -322,6 +324,70 @@ async function updateUserAvatar(userId: string, avatarUrl: string) {
   if (!user) {
     throw new ApiError("User not found", 404);
   }
+  await redis?.set(`user:${userId}`, user, { ex: 60 * 15 }).catch(null);
+
+  return user;
+}
+
+async function updateUserDetails(userId: string, updateData: Partial<IUser>) {
+  if (!isValidObjectId(userId)) {
+    throw new ApiError("Invalid user id");
+  }
+
+  const orConditions: Array<Record<string, string>> = [];
+  if (updateData.username) {
+    orConditions.push({ username: updateData.username });
+  }
+  if (updateData.phone) {
+    orConditions.push({ phone: updateData.phone });
+  }
+  if (updateData.email) {
+    orConditions.push({ email: updateData.email });
+  }
+
+  if (orConditions.length > 0) {
+    await connectDB();
+    const existingUser = await User.findOne({
+      _id: { $ne: userId },
+      $or: orConditions,
+    });
+    if (existingUser) {
+      let credential = "Username or Phone";
+      if (
+        existingUser.email?.trim() &&
+        existingUser.email === updateData.email
+      ) {
+        credential = "Email";
+      } else if (existingUser.username === updateData.username) {
+        credential = "Username";
+      } else if (existingUser.phone === updateData.phone) {
+        credential = "Phone number";
+      }
+      throw new ApiError(
+        `${credential} is already registered by another user`,
+        409,
+      );
+    }
+  }
+
+  await connectDB();
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        fullName: updateData.fullName,
+        username: updateData.username,
+        phone: updateData.phone,
+        email: updateData.email,
+      },
+    },
+    { new: true },
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
   await redis?.set(`user:${userId}`, user, { ex: 60 * 15 }).catch(null);
 
   return user;
@@ -337,4 +403,5 @@ export {
   verifyPasswordResetToken,
   resetPassword,
   updateUserAvatar,
+  updateUserDetails,
 };

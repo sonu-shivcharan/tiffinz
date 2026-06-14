@@ -2,7 +2,7 @@
 
 import { handleError } from "@/lib/handleError";
 import { IUser } from "@/models/user.model";
-import { RegisterFormInput } from "@/zod/user.schema";
+import { RegisterFormInput, UpdateUserProfile } from "@/zod/user.schema";
 import axios from "axios";
 
 export interface IAuthUser {
@@ -165,6 +165,20 @@ async function updateUserAvatar(avatarUrl: string) {
     throw new Error(message);
   }
 }
+
+async function updateUserProfile(profileData: UpdateUserProfile): Promise<IAuthUser> {
+  try {
+    const response = await axios.put("/api/users", profileData);
+    const user = response.data?.data;
+    if (!user) {
+      throw new Error("Failed to update profile");
+    }
+    return { user, error: null };
+  } catch (error) {
+    return { error: handleError(error, "update profile"), user: null };
+  }
+}
+
 export {
   registerUser,
   loginUserWithPhone,
@@ -175,4 +189,5 @@ export {
   loginUserWithUsername,
   verifyPasswordResetToken,
   updateUserAvatar,
+  updateUserProfile,
 };
