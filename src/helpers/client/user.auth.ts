@@ -2,7 +2,7 @@
 
 import { handleError } from "@/lib/handleError";
 import { IUser } from "@/models/user.model";
-import { RegisterFormInput } from "@/zod/user.schema";
+import { RegisterFormInput, UpdateUserProfile } from "@/zod/user.schema";
 import axios from "axios";
 
 export interface IAuthUser {
@@ -145,12 +145,40 @@ async function verifyPasswordResetToken(token: string, id: string) {
       params: { token, id },
     });
     const data = res.data.data;
-    return !data.success;
+    return data.success as boolean;
   } catch (error) {
     console.log("error", error);
     return false;
   }
 }
+
+async function updateUserAvatar(avatarUrl: string) {
+  try {
+    const res = await axios.patch("/api/users", {
+      newAvatarUrl: avatarUrl,
+    });
+    const data = res.data.data;
+    return data.success;
+  } catch (error) {
+    console.log("error while updating user avatar", error);
+    const message = handleError(error, "update avatar").message;
+    throw new Error(message);
+  }
+}
+
+async function updateUserProfile(profileData: UpdateUserProfile): Promise<IAuthUser> {
+  try {
+    const response = await axios.put("/api/users", profileData);
+    const user = response.data?.data;
+    if (!user) {
+      throw new Error("Failed to update profile");
+    }
+    return { user, error: null };
+  } catch (error) {
+    return { error: handleError(error, "update profile"), user: null };
+  }
+}
+
 export {
   registerUser,
   loginUserWithPhone,
@@ -160,4 +188,6 @@ export {
   loginUserWithEmail,
   loginUserWithUsername,
   verifyPasswordResetToken,
+  updateUserAvatar,
+  updateUserProfile,
 };

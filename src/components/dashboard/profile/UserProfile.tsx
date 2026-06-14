@@ -1,9 +1,18 @@
+"use client";
 import Loader from "@/components/ui/Loader";
 import { IUser } from "@/models/user.model";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AvatarFallback, AvatarImage, Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { BadgeCheck, User } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 function UserProfile({ user }: { user: IUser | null }) {
   if (!user) {
@@ -15,6 +24,11 @@ function UserProfile({ user }: { user: IUser | null }) {
       {/* Header */}
       <CardHeader>
         <CardTitle className="text-2xl font-semibold">Profile</CardTitle>
+        <CardAction className="">
+          <Button variant="outline" size="sm" className="px-3 rounded-2xl" asChild>
+            <Link href={"/dashboard/profile/settings"}>Edit</Link>
+          </Button>
+        </CardAction>
         <p className="text-sm text-muted-foreground mt-1">
           ID: {String(user._id)}
         </p>
@@ -22,10 +36,8 @@ function UserProfile({ user }: { user: IUser | null }) {
 
       {/* Body */}
       <CardContent className="space-y-6">
-
         {/* Top Row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-
           {/* Avatar + User Info */}
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16 rounded-full overflow-hidden">
@@ -56,7 +68,6 @@ function UserProfile({ user }: { user: IUser | null }) {
           <p className="text-sm font-medium text-muted-foreground">Phone</p>
           <p className="text-base font-medium">{user.phone}</p>
         </div>
-
       </CardContent>
     </Card>
   );

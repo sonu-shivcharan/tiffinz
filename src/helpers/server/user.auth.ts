@@ -6,6 +6,7 @@ import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/ApiResponse";
 import connectDB from "@/utils/dbConnect";
 import generateRefreshAndAccessToken from "@/utils/generateTokens";
+import { redis } from "@/utils/redis";
 import { verifyJWT } from "@/utils/verifyJWT";
 
 import {
@@ -18,6 +19,7 @@ import { CreateUserByAdminInput } from "@/zod/user.schema";
 import { createHash } from "crypto";
 import { isValidObjectId } from "mongoose";
 import { cookies } from "next/headers";
+import { z } from "zod";
 
 async function doesUserAlreadyExist(userData: IUser | CreateUserByAdminInput) {
   // Check if user exists
@@ -295,6 +297,102 @@ async function resetPassword(userId: string, newPassword: string) {
   return { success: true };
 }
 
+async function updateUserAvatar(userId: string, avatarUrl: string) {
+  if (!isValidObjectId(userId)) {
+    throw new ApiError("Invalid user id");
+  }
+
+  const {
+    success,
+    data: parsedUrl,
+    error,
+  } = z.string().url().safeParse(avatarUrl);
+  if (!success) {
+    throw new ApiError("Inavlid url", 400, error);
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        avatar: parsedUrl,
+      },
+    },
+    { new: true },
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+  await redis?.set(`user:${userId}`, user, { ex: 60 * 15 }).catch(null);
+
+  return user;
+}
+
+async function updateUserDetails(userId: string, updateData: Partial<IUser>) {
+  if (!isValidObjectId(userId)) {
+    throw new ApiError("Invalid user id");
+  }
+
+  const orConditions: Array<Record<string, string>> = [];
+  if (updateData.username) {
+    orConditions.push({ username: updateData.username });
+  }
+  if (updateData.phone) {
+    orConditions.push({ phone: updateData.phone });
+  }
+  if (updateData.email) {
+    orConditions.push({ email: updateData.email });
+  }
+
+  if (orConditions.length > 0) {
+    await connectDB();
+    const existingUser = await User.findOne({
+      _id: { $ne: userId },
+      $or: orConditions,
+    });
+    if (existingUser) {
+      let credential = "Username or Phone";
+      if (
+        existingUser.email?.trim() &&
+        existingUser.email === updateData.email
+      ) {
+        credential = "Email";
+      } else if (existingUser.username === updateData.username) {
+        credential = "Username";
+      } else if (existingUser.phone === updateData.phone) {
+        credential = "Phone number";
+      }
+      throw new ApiError(
+        `${credential} is already registered by another user`,
+        409,
+      );
+    }
+  }
+
+  await connectDB();
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: {
+        fullName: updateData.fullName,
+        username: updateData.username,
+        phone: updateData.phone,
+        email: updateData.email,
+      },
+    },
+    { new: true },
+  ).select("-password");
+
+  if (!user) {
+    throw new ApiError("User not found", 404);
+  }
+
+  await redis?.set(`user:${userId}`, user, { ex: 60 * 15 }).catch(null);
+
+  return user;
+}
+
 export {
   logoutUser,
   createUserSession,
@@ -304,4 +402,6 @@ export {
   doesUserAlreadyExist,
   verifyPasswordResetToken,
   resetPassword,
+  updateUserAvatar,
+  updateUserDetails,
 };
