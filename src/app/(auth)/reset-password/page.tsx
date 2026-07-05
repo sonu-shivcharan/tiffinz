@@ -11,6 +11,7 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import axios from "axios";
 import { handleError } from "@/lib/handleError";
+// import { Button } from "@/components/ui/button";
 
 function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -25,7 +26,16 @@ function ResetPasswordPage() {
   });
 
   if (!token || !userId) {
-    return <div>Invalid password reset link</div>;
+    return (
+      <div className="w-full flex flex-col justify-center items-center">
+        <div className="text-destructive text-center p-4">
+          Invalid password reset link
+        </div>
+        {/* <div>
+          <Button variant={"outline"}>Go Back</Button>
+        </div> */}
+      </div>
+    );
   }
   if (isLoading) {
     return <Loader />;
