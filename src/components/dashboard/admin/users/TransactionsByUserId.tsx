@@ -20,13 +20,13 @@ function TransactionsByUserId({ userId }: { userId: string }) {
   const {
     data: response,
     error,
-    isFetching,
+    isLoading,
   } = useQuery({
     queryKey: ["transactionsByUserId", userId],
     queryFn: () => getTransactionsByUserId(userId, { limit: 5 }),
   });
   console.log("response", response);
-  if (isFetching && !error) {
+  if (isLoading && !error) {
     return <Loader />;
   } else if (error) {
     toast.error(error.message);
