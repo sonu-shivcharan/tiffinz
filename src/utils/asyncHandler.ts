@@ -2,16 +2,21 @@ import { handleError } from "@/utils/handleError";
 import { NextRequest } from "next/server";
 import { redis, isRedisEnabled } from "./redis";
 import { ApiError } from "./apiError";
+import { MiddlewareFn } from "./middlewares";
 
 type RouteContext<T = Record<string, never>> = {
   params: Promise<T>;
 };
 
 type AsyncHandlerOptions = {
+  /**
+   * @deprecated use middelwares:[MiddelwareFN]
+   */
   rateLimiter?: {
     maxReq: number;
     timeout: number;
   };
+  middlewares?: MiddlewareFn[];
 };
 export function asyncHandler<T = Record<string, never>>(
   handler: (req: NextRequest, context: RouteContext<T>) => Promise<Response>,
@@ -35,6 +40,11 @@ export function asyncHandler<T = Record<string, never>>(
         }
         if (current > limit) {
           throw new ApiError("Too many requests, try later", 429);
+        }
+      }
+      if (options?.middlewares) {
+        for (const middleware of options?.middlewares) {
+          await middleware(req);
         }
       }
       return await handler(req, context);

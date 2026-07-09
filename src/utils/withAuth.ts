@@ -7,9 +7,11 @@ import User, { IUser } from "@/models/user.model";
 import connectDB from "./dbConnect";
 import { redis, isRedisEnabled } from "./redis";
 import { isValidObjectId } from "mongoose";
+import { MiddlewareFn } from "./middlewares";
 
 type withAuthOptions = {
   requiredRole?: UserRole;
+  middlewares?: MiddlewareFn[];
 }; // Define the RouteContext type to match Next.js expectations
 type RouteContext<T = Record<string, never>> = {
   params: Promise<T>;
@@ -40,11 +42,10 @@ export function withAuth<T = Record<string, never>>(
         throw new ApiError("Invalid userId", 401);
       }
 
-      const cachedUser = isRedisEnabled && redis
-        ? await redis
-            .get<IUser>(`user:${userId}`)
-            .catch(() => null)
-        : null;
+      const cachedUser =
+        isRedisEnabled && redis
+          ? await redis.get<IUser>(`user:${userId}`).catch(() => null)
+          : null;
 
       let user;
 
@@ -73,6 +74,11 @@ export function withAuth<T = Record<string, never>>(
         user.role !== UserRole.admin
       ) {
         throw new ApiError("Access denied", 403);
+      }
+      if (options?.middlewares) {
+        for (const middleware of options?.middlewares) {
+          await middleware(req, user as IUser);
+        }
       }
 
       return await callback(req, context, user as IUser);
