@@ -2,6 +2,7 @@ import { verifyPasswordResetToken } from "@/helpers/server/user.auth";
 import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/ApiResponse";
 import { asyncHandler } from "@/utils/asyncHandler";
+import { publicRateLimiter } from "@/utils/middlewares/rateLimiter";
 
 const verifyPasswordResetTokenRoute = asyncHandler(
   async (req) => {
@@ -20,10 +21,7 @@ const verifyPasswordResetTokenRoute = asyncHandler(
     return ApiResponse.success("Password reset token is valid", { userId });
   },
   {
-    rateLimiter: {
-      maxReq: 10,
-      timeout: 60,
-    },
+    middlewares: [publicRateLimiter({ maxReq: 10, window: 60 })],
   },
 );
 

@@ -5,6 +5,7 @@ import {
 import { ApiError } from "@/utils/apiError";
 import { ApiResponse } from "@/utils/ApiResponse";
 import { asyncHandler } from "@/utils/asyncHandler";
+import { publicRateLimiter } from "@/utils/middlewares/rateLimiter";
 
 const resetPasswordRoute = asyncHandler(
   async (req) => {
@@ -28,10 +29,7 @@ const resetPasswordRoute = asyncHandler(
     return ApiResponse.success("Password reset successfully");
   },
   {
-    rateLimiter: {
-      maxReq: 5,
-      timeout: 60,
-    },
+    middlewares: [publicRateLimiter({ maxReq: 5, window: 60 * 5 })],
   },
 );
 

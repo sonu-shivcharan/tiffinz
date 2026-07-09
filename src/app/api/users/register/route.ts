@@ -4,6 +4,7 @@ import { userSchema } from "@/zod/user.schema";
 import { registerUser } from "@/helpers/server/user.auth";
 import { UserRole } from "@/constants/enum";
 import { IUser } from "@/models/user.model";
+import { publicRateLimiter } from "@/utils/middlewares/rateLimiter";
 
 export const POST = asyncHandler(
   async (req) => {
@@ -35,9 +36,6 @@ export const POST = asyncHandler(
     );
   },
   {
-    rateLimiter: {
-      maxReq: 5,
-      timeout: 60,
-    },
+    middlewares: [publicRateLimiter({ maxReq: 5, window: 60 })],
   },
 );

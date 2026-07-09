@@ -8,6 +8,7 @@ import {
 } from "@/zod/user.login.schema";
 
 import { loginUser, createUserSession } from "@/helpers/server/user.auth";
+import { publicRateLimiter } from "@/utils/middlewares/rateLimiter";
 // type LoginOption = {
 //   key: keyof ILoginCredentials;
 //   schema:
@@ -70,9 +71,6 @@ export const POST = asyncHandler(
     return await createUserSession(user?._id);
   },
   {
-    rateLimiter: {
-      maxReq: 4,
-      timeout: 60,
-    },
+    middlewares: [publicRateLimiter({ maxReq: 4, window: 60 })],
   },
 );
